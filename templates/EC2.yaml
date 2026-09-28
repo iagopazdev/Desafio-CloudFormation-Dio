@@ -1,0 +1,48 @@
+######################################################################
+# TEMPLATE 1: INSTÂNCIA EC2 SIMPLES
+# Este é o template mais básico do CloudFormation.
+# Ele cria apenas um recurso: uma instância EC2 (máquina virtual).
+#
+# Conceitos demonstrados:
+#   - Description: descrição legível do que o template faz
+#   - Resources: seção obrigatória onde os recursos AWS são definidos
+#   - Propriedades de uma instância EC2
+######################################################################
+
+# Description: texto que aparece no console da AWS ao lado da stack.
+# Ajuda a identificar o propósito da stack rapidamente.
+Description: Criar um Amazon EC2 simples
+
+# Resources: a única seção OBRIGATÓRIA de um template CloudFormation.
+# Aqui você lista todos os recursos AWS que deseja criar.
+Resources:
+
+  # "MinhaInstancia" é o nome lógico do recurso (você escolhe).
+  # Esse nome é usado internamente pelo CloudFormation para referenciar o recurso.
+  MinhaInstancia:
+
+    # Type: define QUAL recurso AWS será criado.
+    # AWS::EC2::Instance = uma máquina virtual (instância EC2).
+    Type: AWS::EC2::Instance
+
+    # Properties: configurações específicas deste recurso.
+    Properties:
+
+      # AvailabilityZone: em qual zona de disponibilidade criar a instância.
+      # Cada região AWS (ex: us-east-1) tem múltiplas zonas (a, b, c...).
+      AvailabilityZone: us-east-1a
+
+      # ImageId: qual AMI (Amazon Machine Image) usar.
+      # A AMI é o "sistema operacional" pré-configurado da instância.
+      # Cada AMI tem um ID único que varia por região.
+      ImageId: ami-0ed9277fb7eb570c9
+
+      # InstanceType: o "tamanho" da máquina (CPU, memória).
+      # t2.micro = 1 vCPU, 1GB RAM — elegível ao Free Tier da AWS.
+      InstanceType: t2.micro
+
+      # Tags: rótulos para organizar e identificar recursos.
+      # A tag "Name" é especial — aparece como nome da instância no console.
+      Tags :
+        - Key: "Name"
+          Value: "EC2"

@@ -1,0 +1,69 @@
+######################################################################
+# TEMPLATE 3: EC2 + APACHE + SECURITY GROUP (FIREWALL)
+# Evolução do template anterior. Adiciona um Security Group
+# para controlar o tráfego de rede da instância.
+#
+# Conceitos novos:
+#   - AWS::EC2::SecurityGroup: o "firewall" da AWS
+#   - SecurityGroupIngress: regras de entrada de tráfego
+#   - !Ref: função que cria referências entre recursos
+######################################################################
+
+Description: Configurar Grupo de Seguranca
+
+Resources:
+  MinhaInstancia:
+    Type: AWS::EC2::Instance
+    Properties:
+      AvailabilityZone: us-east-1a
+      ImageId: ami-0ed9277fb7eb570c9
+      InstanceType: t2.micro
+      Tags :
+        - Key: "Name"
+          Value: "Webserver-Firewall"
+      UserData:
+        Fn::Base64:
+          !Sub |
+            #!/bin/bash -xe
+            yum install -y httpd.x86_64
+            systemctl start httpd.service
+            systemctl enable httpd.service
+            echo "<h1>OLA AWS FOUNDATIONS do $(hostname -f)</h1>" > /var/www/html/index.html
+
+      # ==========================================
+      # SecurityGroups: lista de Security Groups associados à instância.
+      # Sem um Security Group liberando a porta 80, ninguém conseguiria
+      # acessar o Apache, mesmo ele estando rodando.
+      # ==========================================
+      SecurityGroups:
+        # !Ref: função intrínseca do CloudFormation que cria uma REFERÊNCIA
+        # a outro recurso do template. Aqui, estamos dizendo:
+        # "associe esta instância ao Security Group definido mais abaixo".
+        # O CloudFormation resolve automaticamente a ordem de criação:
+        # primeiro cria o Security Group, depois a instância.
+      - !Ref GrupoSeguranca
+
+  # ==========================================
+  # SECURITY GROUP: o firewall virtual da AWS
+  # Controla quais conexões podem ENTRAR e SAIR da instância.
+  # Por padrão, todo tráfego de entrada é BLOQUEADO.
+  # Você precisa criar regras explícitas para liberar portas.
+  # ==========================================
+  GrupoSeguranca:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Acesso Liberado Porta 80
+
+      # SecurityGroupIngress: regras de ENTRADA (quem pode se conectar).
+      # Cada regra especifica protocolo, portas e origem.
+      SecurityGroupIngress:
+      - IpProtocol: tcp        # Protocolo: TCP (usado por HTTP, SSH, etc.)
+        FromPort: 80           # Porta inicial do range
+        ToPort: 80             # Porta final do range (80 a 80 = só a porta 80)
+        CidrIp: 0.0.0.0/0     # Origem: qualquer IP (0.0.0.0/0 = o mundo inteiro)
+        # ⚠️ Em produção, restrinja o CidrIp ao mínimo necessário!
+        # Exemplo: "203.0.113.0/24" para liberar apenas uma rede específica.
+
+      # Nota: a porta 80 é a porta padrão do HTTP.
+      # Se quiséssemos HTTPS, liberaríamos a porta 443.
+      # Se quiséssemos SSH, liberaríamos a porta 22.

@@ -1,0 +1,29 @@
+# Arquivos a ignorar no repositório
+
+# Credenciais e configurações AWS
+.aws/
+*.pem
+*.key
+
+# Arquivos de sistema
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDEs e editores
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Arquivos temporários
+*.tmp
+*.bak
+*.log
+
+# Node modules (caso use alguma ferramenta)
+node_modules/
+
+# Arquivos zip de backup
+*.zip

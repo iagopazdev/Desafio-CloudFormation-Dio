@@ -1,0 +1,129 @@
+######################################################################
+# TEMPLATE 4: EC2 + S3 + IAM USER/GROUP + SECURITY GROUP
+# O template mais completo do projeto. Demonstra a criação
+# coordenada de múltiplos serviços AWS em uma única stack.
+#
+# Conceitos novos:
+#   - AWSTemplateFormatVersion: versão do formato do template
+#   - Parameters: valores configuráveis na criação da stack
+#   - Mappings: tabela de lookup para valores regionais
+#   - Outputs: informações exibidas após a criação da stack
+#   - !FindInMap: busca valores na seção Mappings
+#   - Múltiplos tipos de recursos (EC2, S3, IAM)
+######################################################################
+
+# AWSTemplateFormatVersion: declara a versão do formato do template.
+# '2010-09-09' é a única versão válida (e a mais recente).
+# É opcional, mas é boa prática sempre incluir.
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: CloudFormation Template to create an EC2 instance, IAM user, and S3 bucket
+
+# ==========================================
+# PARAMETERS: valores que o usuário pode definir na criação da stack.
+# Em vez de hardcodar valores, Parameters tornam o template REUTILIZÁVEL.
+# Na hora de criar a stack, a AWS pergunta esses valores ao usuário.
+# ==========================================
+Parameters:
+  InstanceType:
+    Type: String
+    Default: t2.micro             # Valor padrão se o usuário não especificar
+    Description: EC2 instance type
+    AllowedValues:                 # Restringe as opções válidas
+      - t2.micro
+      - t3.micro
+    ConstraintDescription: Must be a valid EC2 instance type.
+
+# ==========================================
+# RESOURCES: todos os recursos AWS que serão criados
+# ==========================================
+Resources:
+
+  # --- RECURSO 1: Bucket S3 ---
+  # S3 (Simple Storage Service) é o serviço de armazenamento de objetos da AWS.
+  # Pode guardar arquivos, backups, logs, conteúdo estático de sites, etc.
+  S3Bucket:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      BucketName: S3-FOUNDATION   # Nome único do bucket (deve ser global na AWS)
+
+  # --- RECURSO 2: Grupo IAM ---
+  # IAM (Identity and Access Management) controla quem pode acessar o quê na AWS.
+  # Um Group agrupa usuários com permissões em comum.
+  IAMGroup:
+    Type: 'AWS::IAM::Group'
+    Properties:
+      GroupName: GPO-ADMIN-LAB
+
+  # --- RECURSO 3: Usuário IAM ---
+  # Um User no IAM representa uma pessoa ou aplicação com acesso à AWS.
+  IAMUser:
+    Type: 'AWS::IAM::User'
+    Properties:
+      UserName: alexsandro.lechner
+      Groups:
+        - !Ref IAMGroup            # Vincula o usuário ao grupo criado acima
+
+  # --- RECURSO 4: Instância EC2 ---
+  EC2Instance:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      # !Ref InstanceType: usa o valor que o usuário definiu em Parameters.
+      # Se não definiu, usa o Default (t2.micro).
+      InstanceType: !Ref InstanceType
+
+      # !FindInMap: busca um valor na seção Mappings.
+      # Sintaxe: !FindInMap [NomeDoMap, ChavePrimária, ChaveSecundária]
+      # Aqui: busca a AMI correta baseado na região onde a stack está sendo criada.
+      # AWS::Region é um pseudo-parâmetro que retorna a região atual automaticamente.
+      ImageId: !FindInMap [UbuntuMap, !Ref "AWS::Region", UbuntuAMI]
+
+      KeyName: your-key-pair-name  # Substitua pelo seu nome de par de chaves
+
+      SecurityGroupIds:
+        - !Ref EC2SecurityGroup
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          apt-get update                    # Atualiza a lista de pacotes (Ubuntu usa apt)
+          apt-get install -y python3-pip    # Instala o pip para Python 3
+
+  # --- RECURSO 5: Security Group para a instância EC2 ---
+  EC2SecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: Enable SSH access
+      VpcId: vpc-040a4ffd0374c4cf3         # ID da VPC onde o SG será criado
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '22'                    # Porta 22 = SSH (acesso remoto ao servidor)
+          ToPort: '22'
+          CidrIp: 0.0.0.0/0               # ⚠️ Em produção, restrinja este IP!
+
+# ==========================================
+# MAPPINGS: tabela de lookup estática.
+# Útil para valores que mudam conforme a região, ambiente, etc.
+# Exemplo clássico: AMIs são diferentes em cada região AWS.
+# ==========================================
+Mappings:
+  UbuntuMap:
+    us-east-1:
+      UbuntuAMI: ami-0c55b159cbfafe1f0     # Ubuntu 20.04 em us-east-1
+    us-west-2:
+      UbuntuAMI: ami-0dba2cbf4e3c2e7b1     # Ubuntu 20.04 em us-west-2
+
+# ==========================================
+# OUTPUTS: informações exibidas APÓS a criação da stack.
+# Muito úteis para consultar IDs de recursos criados sem precisar
+# ir ao console da AWS. Também podem ser exportados para outras stacks.
+# ==========================================
+Outputs:
+  InstanceId:
+    Description: The Instance ID
+    Value: !Ref EC2Instance                # !Ref em EC2 retorna o Instance ID
+  S3BucketName:
+    Description: The name of the S3 bucket
+    Value: !Ref S3Bucket                   # !Ref em S3 retorna o nome do bucket
+  IAMUserName:
+    Description: The IAM User Name
+    Value: !Ref IAMUser                    # !Ref em IAM User retorna o nome do usuário

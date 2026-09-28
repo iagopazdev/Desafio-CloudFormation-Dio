@@ -1,0 +1,52 @@
+######################################################################
+# TEMPLATE 2: EC2 COM SERVIDOR APACHE
+# Evolução do template anterior. Além de criar a instância,
+# instala e configura o Apache HTTP Server automaticamente.
+#
+# Conceito novo: UserData
+#   - Permite executar comandos na instância assim que ela inicia.
+#   - É a forma mais simples de automatizar configuração no EC2.
+######################################################################
+
+Description: Instalar Servidor Apache
+
+Resources:
+  MinhaInstancia:
+    Type: AWS::EC2::Instance
+    Properties:
+      AvailabilityZone: us-east-1a
+      ImageId: ami-0ed9277fb7eb570c9
+      InstanceType: t2.micro
+      Tags :
+        - Key: "Name"
+          Value: "Webserver-Apache"
+
+      # ==========================================
+      # UserData: script executado na PRIMEIRA inicialização da instância.
+      # Tudo que você colocar aqui roda como root automaticamente.
+      # ==========================================
+      UserData:
+
+        # Fn::Base64: o UserData precisa ser enviado em Base64 para a AWS.
+        # O CloudFormation faz essa conversão automaticamente com esta função.
+        Fn::Base64:
+
+          # !Sub: função de substituição. Permite usar variáveis dentro do texto.
+          # O "|" indica um bloco de texto multilinha no YAML.
+          !Sub |
+            #!/bin/bash -xe
+            # -x: imprime cada comando antes de executar (útil para debug)
+            # -e: para a execução se qualquer comando falhar
+
+            # Instala o Apache HTTP Server (httpd) no Amazon Linux
+            yum install -y httpd.x86_64
+
+            # Inicia o serviço do Apache imediatamente
+            systemctl start httpd.service
+
+            # Habilita o Apache para iniciar automaticamente no boot
+            systemctl enable httpd.service
+
+            # Cria uma página HTML simples para testar
+            # $(hostname -f) será substituído pelo hostname da instância
+            echo "<h1>OLA AWS FOUNDATIONS do $(hostname -f)</h1>" > /var/www/html/index.html
